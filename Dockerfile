@@ -1,32 +1,29 @@
-# See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
+# RaceDay API - Linux container, multi-stage build, runs as the non-root "app" user.
+# Build from the repository root:   docker build -t raceday-api -f Dockerfile .
 
-# Depending on the operating system of the host machines(s) that will build or run the containers, the image specified in the FROM statement may need to be changed.
-# For more information, please see https://aka.ms/containercompat
-
-# This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-nanoserver-ltsc2022 AS base
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-
-# This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:10.0-nanoserver-ltsc2022 AS build
-ARG BUILD_CONFIGURATION=Release
+# ---- Build stage: restore (cached on the project file), then publish ----
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["RaceDayPOE.csproj", "."]
-RUN dotnet restore "./RaceDayPOE.csproj"
-COPY . .
-WORKDIR "/src/."
-RUN dotnet build "./RaceDayPOE.csproj" -c %BUILD_CONFIGURATION% -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./RaceDayPOE.csproj" -c %BUILD_CONFIGURATION% -o /app/publish /p:UseAppHost=false
+COPY RaceDay.API_Part2.csproj ./
+RUN dotnet restore RaceDay.API_Part2.csproj
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
-FROM base AS final
+COPY . ./
+RUN dotnet publish RaceDay.API_Part2.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+# ---- Runtime stage: only the published output and the ASP.NET runtime ----
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "RaceDayPOE.dll"]
+
+ENV ASPNETCORE_URLS=http://+:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    App__HttpsRedirect=false
+
+COPY --from=build /app/publish .
+
+# Local image fallback (used when no Azure connection string is configured) writes to wwwroot/uploads.
+RUN mkdir -p /app/wwwroot/uploads && chown -R app:app /app/wwwroot
+
+USER app
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "RaceDay.API_Part2.dll"]
