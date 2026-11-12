@@ -1,36 +1,86 @@
-namespace RaceDayPOE
+using Microsoft.EntityFrameworkCore;
+using RaceDay.API_Part2.Data;
+using RaceDay.API_Part2.Helper;
+using RaceDay.API_Part2.Services;
+
+namespace RaceDay.API_Part2
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static void Main(string[] args) => CreateApp(args).Run();
+
+        /// <summary>
+        /// Builds the application without starting it. <paramref name="configureServices"/> runs after the API's own
+        /// registrations, so a host (for example an integration-test harness) can replace the database provider.
+        /// </summary>
+        public static WebApplication CreateApp(string[] args, Action<IServiceCollection>? configureServices = null)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddControllersWithViews();
+            builder.Services.AddControllers();
+            builder.Services.AddEndpointsApiExplorer();
+
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+                {
+                    Title = "RaceDay API",
+                    Version = "v1",
+                    Description = "REST API for the RaceDay event management system. Log in with POST /api/auth/login " +
+                                  "first; the session cookie is then sent automatically by Swagger UI for later calls.",
+                });
+
+                // Endpoint and model descriptions come from the XML file produced by GenerateDocumentationFile.
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, $"{typeof(Program).Assembly.GetName().Name}.xml");
+                if (File.Exists(xmlPath))
+                {
+                    options.IncludeXmlComments(xmlPath);
+                }
+            });
+
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found in configuration.");
+
+            builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+
+            builder.Services.AddDistributedMemoryCache();
+            builder.Services.AddScoped<IAzureBlobService, AzureBlobService>();
+            builder.Services.AddSession(options =>
+            {
+                options.Cookie.Name = SessionKeys.CookieName;
+                options.IdleTimeout = SessionKeys.IdleTimeout;
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+            });
+
+            configureServices?.Invoke(builder.Services);
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+            // Integration tests run with the "Testing" environment and create their own schema.
+            if (!app.Environment.IsEnvironment("Testing"))
             {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
+                using var scope = app.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                DbInitializer.Initialize(db, app.Configuration.GetValue<bool>("Seed:Demo"));
             }
 
-            app.UseHttpsRedirection();
-            app.UseRouting();
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
-            app.UseAuthorization();
+            // Containers serve plain HTTP behind the host's port mapping, so the redirect can be switched off (App:HttpsRedirect).
+            if (!app.Environment.IsEnvironment("Testing") && app.Configuration.GetValue("App:HttpsRedirect", true))
+            {
+                app.UseHttpsRedirection();
+            }
 
-            app.MapStaticAssets();
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
+            app.UseStaticFiles();   // Serves /uploads/* when images are stored locally.
 
-            app.Run();
+            app.UseSession();   // Must come before MapControllers so controllers can read the session.
+            app.MapControllers();
+
+            return app;
         }
     }
 }
