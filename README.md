@@ -15,9 +15,10 @@
 | **Repository** | [github.com/botletebele66/RaceDay.API_Part2](https://github.com/botletebele66/RaceDay.API_Part2) |
 | **Video walkthrough** | [youtu.be/zk4hYBl2cKw](https://youtu.be/zk4hYBl2cKw) |
 
-[![Build](https://github.com/botletebele66/RaceDay.API_Part2/actions/workflows/ci.yml/badge.svg)](https://github.com/botletebele66/RaceDay.API_Part2/actions/workflows/ci.yml)
+[![Build](https://github.com/botletebele66/RaceDayPOE/actions/workflows/ci.yml/badge.svg)](https://github.com/botletebele66/RaceDayPOE/actions/workflows/ci.yml)
 
-![Uploading image.png…]()
+<img width="1322" height="595" alt="image" src="https://github.com/user-attachments/assets/62f5fd2b-51d8-423e-aed7-ee1811ad6213" />
+
 
 
 ---
