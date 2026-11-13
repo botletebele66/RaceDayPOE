@@ -13,10 +13,17 @@
 | **Student Number** | ST10478568 |
 | **Module** | PROG6212 – Part 2 |
 | **Repository** | [github.com/botletebele66/RaceDay.API_Part2](https://github.com/botletebele66/RaceDay.API_Part2) |
+| **Video walkthrough** | [youtu.be/zk4hYBl2cKw](https://youtu.be/zk4hYBl2cKw) |
 
 [![Build](https://github.com/botletebele66/RaceDay.API_Part2/actions/workflows/ci.yml/badge.svg)](https://github.com/botletebele66/RaceDay.API_Part2/actions/workflows/ci.yml)
 
 ---
+## The youtube link 
+
+<img width="950" height="725" alt="image" src="https://github.com/user-attachments/assets/d33bf0f5-01e2-4a21-b102-3849586ca00a" />
+
+| **Video walkthrough** | [youtu.be/zk4hYBl2cKw](https://youtu.be/zk4hYBl2cKw) |
+
 
 ## 🚀 About Part 2
 
