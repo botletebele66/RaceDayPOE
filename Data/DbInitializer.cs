@@ -19,13 +19,18 @@ public static class DbInitializer
 
         // EnsureCreated does not update an existing database when the model changes.
         // Keep this idempotent SQL Server schema update until the project adopts EF migrations.
-        db.Database.ExecuteSqlRaw("""
-            IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL
-               AND COL_LENGTH(N'dbo.Users', N'ProfileImageUrl') IS NULL
-            BEGIN
-                ALTER TABLE dbo.Users ADD ProfileImageUrl nvarchar(max) NULL;
-            END
-            """);
+        // It is T-SQL, so it only runs on SQL Server; the in-memory provider used by the tests
+        // (and any other non-SQL Server provider) already gets the full schema from EnsureCreated.
+        if (db.Database.IsSqlServer())
+        {
+            db.Database.ExecuteSqlRaw("""
+                IF OBJECT_ID(N'dbo.Users', N'U') IS NOT NULL
+                   AND COL_LENGTH(N'dbo.Users', N'ProfileImageUrl') IS NULL
+                BEGIN
+                    ALTER TABLE dbo.Users ADD ProfileImageUrl nvarchar(max) NULL;
+                END
+                """);
+        }
 
         if (!seedDemoData || db.Users.Any())
         {
